@@ -1,0 +1,95 @@
+version: 2
+
+variables:
+    docker:
+      - image: cimg/ubuntu:latest
+
+      # Install dependencies and set PATH
+
+      - run:
+          name: Install dependencies and set PATH
+          command: |
+            # x11-utils required to avoid R::png() segfaulting
+            export DEBIAN_FRONTEND=noninteractive
+            apt update && apt install -y \
+              curl \
+              git \
+              locales \
+              locales-all \
+              rsync \
+              tree \
+              wget \
+              x11-utils
+
+            # support en_US.utf8
+            rm -rf /var/lib/apt/lists/*
+            localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
+
+            # Set env vars to be used throughout; this is specific to how
+            # circleci handles env vars
+            echo 'export LC_ALL=en_US.utf8' >> $BASH_ENV
+            echo 'export LANG=en_US.utf8' >> $BASH_ENV
+            echo 'export ORIG=$(pwd)' >> $BASH_ENV
+
+            echo "export PATH=\$PATH:/opt/miniforge/bin" >> $BASH_ENV
+            source $BASH_ENV
+        # --------------------------------------------------------------------------
+        # Set up conda if the environments do not already exist
+        setup-conda: &setup
+          run:
+            name: Setup conda
+            command: |
+              source $BASH_ENV
+              echo $PATH
+              # /opt/miniforge will only exist if there was a cache restore; otherwise we'll make it here.
+              #
+              if [ ! -e /opt/miniforge ]; then
+                  curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+                  bash Miniforge3-$(uname)-$(uname -m).sh -b -p /opt/miniforge
+                  source "/opt/miniforge/etc/profile.d/conda.sh"
+                  conda activate
+
+                  which conda
+                  conda --version
+                  conda config --system --add channels bioconda
+                  conda config --system --add channels conda-forge
+                  conda config --system --set channel_priority strict
+                  conda config --show
+
+                  # https://docs.conda.io/projects/conda-build/en/latest/resources/link-scripts.html,
+                  # post-link scripts should not depend on any installed or
+                  # to-be-installed conda packages...but they do.
+                  conda install -n base r-base yq
+
+                  time conda env create -n $LCDBWF_ENV --file env.yml
+                  time conda env create -n $LCDBWF_ENV_R --file env-r.yml
+              fi
+      #
+      - run:
+          name: Install tools and setup conda environment
+          command: |
+            sudo apt-get update
+            source 
+            curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-
+
+      # Make the script executable
+      - run:
+          name: Make script executable
+          command: chmod +x download_script.sh
+
+      # Run the script with a TSV input
+      - run:
+          name: Run download script
+          command: |
+            ./run_combinations.sh inputs.tsv
+
+      # Persist log file as artifact
+      - persist_to_workspace:
+          root: .
+          paths:
+            - results.log
+
+workflows:
+  download_workflow:
+    jobs:
+      - run-download-script

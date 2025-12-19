@@ -1,65 +1,85 @@
 #!/usr/bin/env bash
-
 set -u
 
 TSV="$1"
-LOGDIR="logs"
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-MASTER_LOG="${LOGDIR}/run_${TIMESTAMP}.log"
+LOGFILE="results.log"
 
-mkdir -p "$LOGDIR"
 
-echo "Starting run at $(date)" | tee "$MASTER_LOG"
-echo "Input file: $TSV" | tee -a "$MASTER_LOG"
-echo "----------------------------------------" | tee -a "$MASTER_LOG"
+
+# Start fresh
+: > "$LOGFILE"
+
+log() {
+    tee -a "$LOGFILE"
+}
+
+separator() {
+    echo ""
+    echo "########################################" | log
+    echo "#####  START OF DOWNLOAD  #####" | log
+    echo "########################################" | log
+}
+
+
 
 tail -n +2 "$TSV" | while IFS=$'\t' read -r URL TOOL; do
     [[ -z "$URL" || -z "$TOOL" ]] && continue
+    TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
 
-    SAFE_URL=$(echo "$URL" | sed 's#[/:]#_#g')
-    RUN_LOG="${LOGDIR}/${TOOL}_${SAFE_URL}_${TIMESTAMP}.log"
+    separator
 
-    echo "[$(date)] Running: $TOOL $URL" | tee -a "$MASTER_LOG"
-    echo "Log file: $RUN_LOG" | tee -a "$MASTER_LOG"
+    case "$TOOL" in
+        wget)
+            CMD=(wget -d --no-passive-ftp --tries=2 --progress=dot:giga "$URL")
+            ;;
+        curl)
+            CMD=(curl -v -L --max-time 300 "$URL")
+            ;;
+        lftp)
+            CMD=(
+                lftp -d -e "
+                    set net:max-retries 2;
+                    set net:timeout 20;
+                    set net:reconnect-interval-base 5;
+                    set cmd:fail-exit true;
+                    set ftp:passive-mode no;
+                    get $URL;
+                    bye
+                "
+            )
+            ;;
+        *)
+            echo "[$TIMESTAMP]" | log
+            echo "Command: UNKNOWN TOOL '$TOOL'" | log
+            echo "Output:" | log
+            echo "Invalid tool" | log
+            echo "Status: Failure" | log
+            separator
+            continue
+            ;;
+    esac
 
+    # Run the command once, with all output logged
     {
-        echo "Command: $TOOL $URL"
-        echo "Started: $(date)"
+        echo "[$TIMESTAMP]"
+        echo "Command: ${CMD[*]}"
+        echo "Output:"
         echo "----------------------------------------"
 
-        case "$TOOL" in
-            wget)
-                wget -d "$URL"
-                ;;
-            curl)
-                curl -v -L "$URL"
-                ;;
-            lftp)
-                lftp -d -e "get $URL; bye"
-                ;;
-            *)
-                echo "ERROR: Unknown tool '$TOOL'"
-                exit 127
-                ;;
-        esac
-
+        "${CMD[@]}"
         EXIT_CODE=$?
+
         echo "----------------------------------------"
-        echo "Exit code: $EXIT_CODE"
-        echo "Finished: $(date)"
-        exit $EXIT_CODE
-    } 2>&1 | tee "$RUN_LOG"
+        if [[ $EXIT_CODE -eq 0 ]]; then
+            echo "Status: Success"
+        else
+            echo "Status: Failure"
+        fi
+    } 2>&1 | log
 
-    EXIT_CODE=${PIPESTATUS[0]}
+    echo "" | log
+    echo "" | log
+    echo "" | log
 
-    if [[ $EXIT_CODE -ne 0 ]]; then
-        echo "❌ FAILED: $TOOL $URL (exit $EXIT_CODE)" | tee -a "$MASTER_LOG"
-    else
-        echo "✅ SUCCESS: $TOOL $URL" | tee -a "$MASTER_LOG"
-    fi
-
-    echo "----------------------------------------" | tee -a "$MASTER_LOG"
 done
-
-echo "All runs completed at $(date)" | tee -a "$MASTER_LOG"
 
