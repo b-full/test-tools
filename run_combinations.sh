@@ -33,7 +33,7 @@ tail -n +2 "$TSV" | while IFS=$'\t' read -r URL TOOL; do
             CMD=(wget -d --no-passive-ftp --tries=2 --progress=dot:giga "$URL")
             ;;
         curl)
-            CMD=(curl -v -L --max-time 300 "$URL" > /dev/null)
+            CMD=(curl -v -L --max-time 300 "$URL" -o example_file)
             ;;
         lftp)
             CMD=(
