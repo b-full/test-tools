@@ -12,7 +12,7 @@ jobs:
             sudo apt-get install -y curl wget lftp
       - run:
           name: run tests
-          command: bash ./run_combinations.sh inputs.tsv
+          command: python compile_table.py inputs.tsv run_combinations.sh results.tsv
 workflows:
   main:
     jobs:
