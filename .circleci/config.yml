@@ -13,7 +13,9 @@ jobs:
             pip3 install pandas
       - run:
           name: run tests
-          command: python3 test.py
+          command: |
+            python3 test.py
+            cat output.tsv 
 workflows:
   main:
     jobs:

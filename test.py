@@ -54,5 +54,5 @@ for tool, cmd in tools.items():
         result['ip'] = get_ip()
         results.append(result)
 
-import pandas
-print(pandas.DataFrame(results))
+
+pandas.DataFrame(results).to_csv("output.tsv", sep="\t")
