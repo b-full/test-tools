@@ -41,15 +41,13 @@ for tool, cmd in tools.items():
         protocol = parsed.scheme
         filename = f"{tool}_{url_name}.fastq.gz"
         filled_cmd= cmd.format(cmd, url=url, filename=filename, filepath=filepath, server=server)
-        print(f"#### {url}")
-        print(f"#### {filled_cmd}")
         p = subprocess.run(filled_cmd, universal_newlines=True, shell=True)
 
         result = {}
         result['exitcode_0'] = p.returncode == 0
         result['size'] = os.stat(filename).st_size if os.path.exists(filename) else 0
         result['tool'] = tool
-        result['cmd'] = cmd
+        result['cmd'] = filled_cmd
         result['url'] = url
         result['protocol'] = protocol
         result['ip'] = get_ip()
