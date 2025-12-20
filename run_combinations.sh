@@ -64,8 +64,8 @@ tail -n +2 "$TSV" | while IFS=$'\t' read -r URL TOOL; do
     separator
 
     # Parse URL to extract protocol and host
-    # Example: https://www.example.com/file.txt -> https://www.example.com
-    # Example: ftp://ftp.silva.de/path/file -> ftp://ftp.silva.de
+    # e.g. https://www.example.com/file.txt -> https://www.example.com
+    # e.g. ftp://ftp.silva.de/path/file -> ftp://ftp.silva.de
     PROTOCOL=$(echo "$URL" | sed -E 's|^([a-z]+://[^/]+).*|\1|')
     # Fallback if parsing fails
     [[ -z "$PROTOCOL" ]] && PROTOCOL="$URL"
@@ -79,12 +79,9 @@ tail -n +2 "$TSV" | while IFS=$'\t' read -r URL TOOL; do
 
     case "$TOOL" in
         wget)
-            # -O specifies output file, will overwrite
             CMD=(wget -d --no-passive-ftp --tries=2 --progress=dot:giga -O "$FILENAME" "$URL")
             ;;
         curl)
-            # -o specifies output file, will overwrite
-            # Alternative: use -o /dev/null to discard
             CMD=(curl -v -L --max-time 300 "$URL" -o "$FILENAME")
             ;;
         lftp)
@@ -111,7 +108,7 @@ tail -n +2 "$TSV" | while IFS=$'\t' read -r URL TOOL; do
     # Capture output to a temporary file for error parsing
     TEMP_OUTPUT=$(mktemp)
 
-    # Run the command once, with all output captured
+    # Run each command once, with all output captured
     {
         echo "[$TIMESTAMP]"
         echo "Command: ${CMD[*]}"
@@ -181,11 +178,17 @@ tail -n +2 "$TSV" | while IFS=$'\t' read -r URL TOOL; do
 
         fi
 
+        echo ""
+        echo "########################################"
+        echo "# REPORTING RESULTS OF DOWNLOAD ATTEMPT #"
+        echo "########################################"
+
         echo "Command: ${CMD[*]}"
         echo "URL: $URL"
         echo "Tool: $TOOL"
         echo "IP: $(get_ip)"
         echo "Timestamp: $TIMESTAMP"
+        echo "File Size: $(( FILE_SIZE / (1024 * 2) )) MB"
         echo "Error Message: $ERROR_MSG"
         echo "Status: $STATUS"
     } | log
