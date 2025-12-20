@@ -91,7 +91,7 @@ tail -n +2 "$TSV" | while IFS=$'\t' read -r URL TOOL; do
             echo "Server: $SERVER"
             echo "Filepath: " $FILEPATH
             echo "Output Filename: $FILENAME"
-            CMD=(lftp -d -e "set ssl:verify-certificate no; get $FILEPATH -o $FILENAME; bye" $SERVER)
+            CMD=(lftp -d -e "set net:max-retries 2; set ssl:verify-certificate no; get $FILEPATH -o $FILENAME; bye" $SERVER)
             ;;
         *)
             echo "[$TIMESTAMP]" | log
