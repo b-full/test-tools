@@ -13,7 +13,7 @@ jobs:
             pip3 install pandas
       - run:
           name: run tests
-          command: python compile_table.py inputs.tsv run_combinations.sh results.tsv
+          command: python3 compile_table.py inputs.tsv run_combinations.sh results.tsv
 workflows:
   main:
     jobs:
