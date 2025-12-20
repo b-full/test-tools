@@ -1,2 +1,4 @@
 lftp
 wget
+python
+pandas
