@@ -9,7 +9,8 @@ jobs:
           name: install
           command: |
             sudo apt-get update
-            sudo apt-get install -y curl wget lftp
+            sudo apt-get install -y curl wget lftp python3-pip
+            pip3 install pandas
       - run:
           name: run tests
           command: python compile_table.py inputs.tsv run_combinations.sh results.tsv
